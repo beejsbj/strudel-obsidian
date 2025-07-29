@@ -4,7 +4,7 @@
 
 Create an Obsidian plugin that enables Jupyter-style music live coding notebooks using Strudel (TidalCycles for JavaScript). Users write Strudel patterns in `strudel` code blocks that become interactive with play controls and shared execution context per note.
 
-Conduct Extensive reseach on the best play to implement this.
+Conduct Extensive reseach, think hard on what would on the best play to implement this.
 
 ## Core Features
 
@@ -126,11 +126,12 @@ class StrudelNotebook {
 -   https://codeberg.org/uzu/strudel/src/branch/main/packages/codemirror
     -   this could potentially have examples of how studel repl implemented its editor
 -   https://codeberg.org/uzu/strudel/src/branch/main/packages other packages you could use for ref.
+-
 
 ## Example Usage
 
 ````markdown
-# Live Coding Session
+# Live Coding Session in a single note
 
 Set the tempo:
 
@@ -167,6 +168,17 @@ stack(
 ```
 
 ```
+
+
+## Research Material
+- https://loophole-letters.vercel.app/strudel
+	- this is a technical blogpost by the creator and how he implemented strudel.
+	- one interesting thing to note is the Mini REPL he talks about, that he uses on the page and in the tutorial pages. we basically have to implement that
+	- https://loophole-letters.vercel.app/strudel1year
+		- 1 year later
+		- shares vanilla js examples
+		- https://codesandbox.io/p/sandbox/strudel-vanilla-repl-24i0wk?file=%2Fsrc%2Findex.js
+
 
 ## Reference Documentation
 
