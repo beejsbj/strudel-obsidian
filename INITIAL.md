@@ -6,6 +6,9 @@ Create an Obsidian plugin that enables Jupyter-style music live coding notebooks
 
 Conduct Extensive reseach, think hard on what would on the best play to implement this.
 
+we are basically creating our own repl in obsidian
+https://strudel.cc/technical-manual/repl/
+
 ## Core Features
 
 ### 1. Interactive Code Blocks
@@ -119,14 +122,17 @@ class StrudelNotebook {
 #### Other strudel packages that might be useful (research, consider and think hard)
 
 -   https://codeberg.org/uzu/strudel/src/branch/main/packages/repl
+
     -   Strudel's repl package
--   https://codeberg.org/uzu/strudel/src/branch/main/packages/draw
-    -   for drawing the punchcard
+    -   /Users/burooj/Projects/strudel/packages/repl
+
 -   http://codeberg.org/uzu/strudel/src/branch/main/packages/mini (mini notation i think)
 -   https://codeberg.org/uzu/strudel/src/branch/main/packages/codemirror
     -   this could potentially have examples of how studel repl implemented its editor
+    -   /Users/burooj/Projects/strudel/packages/codemirror/highlight.mjs (could have how to implement visual highlighintin within obisidian)
 -   https://codeberg.org/uzu/strudel/src/branch/main/packages other packages you could use for ref.
--
+-   example implementation
+    -   /Users/burooj/Projects/strudel/examples/
 
 ## Example Usage
 
@@ -176,8 +182,6 @@ stack(
 	- one interesting thing to note is the Mini REPL he talks about, that he uses on the page and in the tutorial pages. we basically have to implement that
 	- https://loophole-letters.vercel.app/strudel1year
 		- 1 year later
-		- shares vanilla js examples
-		- https://codesandbox.io/p/sandbox/strudel-vanilla-repl-24i0wk?file=%2Fsrc%2Findex.js
 
 
 ## Reference Documentation

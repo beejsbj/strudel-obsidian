@@ -5,12 +5,23 @@
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
-		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && bun run copy",
+		"copy": "mkdir -p /Users/burooj/Obsidian/strudel-test/.obsidian/plugins/strudel-obsidian && cp main.js manifest.json styles.css /Users/burooj/Obsidian/strudel-test/.obsidian/plugins/strudel-obsidian/",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
 	"keywords": [],
 	"author": "",
 	"license": "MIT",
+	"dependencies": {
+		"@strudel/codemirror": "latest",
+		"@strudel/core": "latest",
+		"@strudel/draw": "latest",
+		"@strudel/mini": "latest",
+		"@strudel/soundfonts": "latest",
+		"@strudel/tonal": "latest", 
+		"@strudel/transpiler": "latest",
+		"@strudel/webaudio": "latest"
+	},
 	"devDependencies": {
 		"@types/node": "^16.11.6",
 		"@typescript-eslint/eslint-plugin": "5.29.0",
