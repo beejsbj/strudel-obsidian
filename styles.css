@@ -1,8 +1,346 @@
-/*
+/* Strudel Plugin Styles - Production Polish */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.strudel-code-block {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	overflow: hidden;
+	transition: border-color 0.2s ease, box-shadow 0.2s ease;
+	background: var(--background-secondary);
+}
 
-If your plugin does not need CSS, delete this file.
+.strudel-code-block:hover {
+	border-color: var(--background-modifier-border-hover);
+}
 
-*/
+.strudel-code-block:focus-within {
+	border-color: var(--interactive-accent);
+}
+
+/* Responsive design for mobile */
+.strudel-responsive {
+	min-width: 0; /* Allow flex shrinking */
+}
+
+@media (max-width: 768px) {
+	.strudel-code-block {
+		margin: 0.5em 0;
+		border-radius: 4px;
+	}
+}
+
+/* Legacy fallback code display */
+.strudel-code {
+	background: var(--background-primary-alt);
+	padding: 1em;
+	margin: 0;
+	font-family: var(--font-monospace);
+	font-size: 0.9em;
+	line-height: 1.4;
+	overflow-x: auto;
+}
+
+/* StrudelMirror Editor Container - Enhanced Theme Integration */
+.strudel-editor-container {
+	background: var(--background) !important;
+	padding: 0;
+	margin: 0;
+	overflow: hidden;
+	position: relative;
+	transition: background-color 0.2s ease;
+}
+
+.theme-dark .strudel-editor-container {
+	background: var(--background-primary-alt);
+}
+
+.theme-light .strudel-editor-container {
+	background: var(--background-primary);
+}
+
+/* CodeMirror Editor Styles - Enhanced Theme Support */
+.strudel-editor-container .cm-editor {
+	background: transparent !important;
+	border: none;
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-small);
+	line-height: var(--line-height-normal);
+	color: var(--text-normal);
+}
+
+.strudel-editor-container .cm-content {
+	padding: 8px;
+	min-height: 3em;
+	transition: padding 0.2s ease;
+}
+
+.strudel-editor-container .cm-focused {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: -2px;
+	border-radius: var(--radius-s);
+}
+
+/* Enhanced scrollbar styling for better theme integration */
+.strudel-editor-container .cm-scroller::-webkit-scrollbar {
+	width: var(--scrollbar-width);
+	height: var(--scrollbar-width);
+}
+
+.strudel-editor-container .cm-scroller::-webkit-scrollbar-thumb {
+	background: var(--scrollbar-thumb-bg);
+	border-radius: var(--radius-s);
+}
+
+.strudel-editor-container .cm-scroller::-webkit-scrollbar-thumb:hover {
+	background: var(--scrollbar-thumb-bg-hover);
+}
+
+/* Syntax highlighting adjustments for Obsidian theme compatibility */
+.strudel-editor-container .cm-line {
+	color: var(--text-normal);
+}
+
+/* Mini notation highlighting during playback */
+.strudel-editor-container .cm-highlight-active {
+	background-color: var(--interactive-accent) !important;
+	color: var(--text-on-accent) !important;
+	border-radius: 2px;
+	animation: strudel-highlight-pulse 0.3s ease-in-out;
+}
+
+@keyframes strudel-highlight-pulse {
+	0% {
+		transform: scale(1);
+		opacity: 0.8;
+	}
+	50% {
+		transform: scale(1.02);
+		opacity: 1;
+	}
+	100% {
+		transform: scale(1);
+		opacity: 0.9;
+	}
+}
+
+/* Visual feedback for live editing */
+.strudel-editor-container.live-editing {
+	box-shadow: 0 0 0 2px var(--interactive-accent);
+	animation: live-edit-glow 0.5s ease-in-out;
+}
+
+@keyframes live-edit-glow {
+	0% {
+		box-shadow: 0 0 0 2px transparent;
+	}
+	50% {
+		box-shadow: 0 0 0 2px var(--interactive-accent);
+	}
+	100% {
+		box-shadow: 0 0 0 2px transparent;
+	}
+}
+
+.strudel-controls {
+	background: var(--background) !important;
+	padding: 4px 8px;
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	transition: background-color 0.2s ease;
+	border-radius: var(--radius-m) var(--radius-m) 0 0;
+}
+
+.theme-dark .strudel-controls {
+	background: var(--background-modifier-border-hover);
+}
+
+.theme-light .strudel-controls {
+	background: var(--background-modifier-border-hover);
+}
+
+@media (max-width: 768px) {
+	.strudel-controls {
+		padding: 6px 12px; /* Slightly larger padding for easier touch */
+	}
+
+	.strudel-code-block {
+		margin: var(--size-4-1) 0;
+		border-radius: var(--radius-s);
+	}
+}
+
+.strudel-toggle-btn {
+	background: hsl(99, 20%, 80%);
+	color: var(--text-muted);
+	border: none;
+	padding: 4px;
+	aspect-ratio: 1;
+	width: 16px;
+	height: 16px;
+	border-radius: var(--radius-s);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.2s var(--anim-motion-smooth);
+	user-select: none;
+	-webkit-tap-highlight-color: transparent;
+	position: relative;
+}
+
+/* SVG icon styling for toggle button */
+.strudel-toggle-btn svg {
+	stroke: currentColor;
+	fill: currentColor;
+}
+
+.strudel-toggle-btn:hover {
+	color: var(--text-normal);
+	background: var(--background-modifier-hover);
+}
+
+.strudel-toggle-btn:active {
+	background: var(--background-modifier-active);
+	transform: scale(0.95);
+}
+
+.strudel-toggle-btn[data-state="playing"] {
+	color: var(--interactive-accent);
+}
+
+.strudel-toggle-btn[data-state="playing"]:hover {
+	color: var(--interactive-accent-hover);
+}
+
+/* Removed old stop button styles - now using toggle button */
+
+/* Removed status styles for minimal UI */
+
+/* Removed all status state styles for minimal UI */
+
+/* Error Display Styles */
+.strudel-error {
+	background: var(--background-modifier-error);
+	border: 1px solid var(--text-error);
+	border-radius: 4px;
+	margin: 0.5em 1em;
+	padding: 0.75em;
+	font-size: 0.85em;
+}
+
+.strudel-error-header {
+	font-weight: 600;
+	color: var(--text-error);
+	margin-bottom: 0.5em;
+	font-size: 0.9em;
+}
+
+.strudel-error-message {
+	color: var(--text-normal);
+	font-family: var(--font-monospace);
+	line-height: 1.4;
+	margin-bottom: 0.5em;
+	white-space: pre-wrap;
+}
+
+.strudel-error-location {
+	color: var(--text-muted);
+	font-size: 0.8em;
+	font-style: italic;
+}
+
+/* Enhanced button states */
+.strudel-toggle-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.strudel-toggle-btn:disabled:hover {
+	background: transparent;
+	color: var(--text-muted);
+}
+
+/* Loading state for buttons - Enhanced */
+.strudel-controls .loading {
+	position: relative;
+	overflow: hidden;
+	pointer-events: none;
+	opacity: 0.8;
+}
+
+.strudel-controls .loading::after {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: -100%;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(
+		90deg,
+		transparent,
+		rgba(255, 255, 255, 0.3),
+		transparent
+	);
+	animation: loading-shimmer 1.5s infinite ease-in-out;
+}
+
+@keyframes loading-shimmer {
+	0% {
+		left: -100%;
+		opacity: 0;
+	}
+	50% {
+		opacity: 1;
+	}
+	100% {
+		left: 100%;
+		opacity: 0;
+	}
+}
+
+/* Enhanced accessibility features */
+@media (prefers-reduced-motion: reduce) {
+	.strudel-toggle-btn,
+	.strudel-code-block {
+		transition: none !important;
+		animation: none !important;
+	}
+
+	.strudel-controls .loading::after {
+		animation: none !important;
+	}
+
+	.cm-highlight-active {
+		animation: none !important;
+	}
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+	.strudel-code-block {
+		border-color: var(--text-normal);
+	}
+
+	.strudel-toggle-btn {
+	}
+}
+
+/* Focus indicators for keyboard navigation */
+.strudel-toggle-btn:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 2px;
+	box-shadow: 0 0 0 4px var(--interactive-accent-hover);
+}
+
+/* Screen reader support */
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}

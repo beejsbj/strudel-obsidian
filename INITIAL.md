@@ -8,6 +8,10 @@ Conduct Extensive reseach, think hard on what would on the best play to implemen
 
 we are basically creating our own repl in obsidian
 https://strudel.cc/technical-manual/repl/
+see example implementations in
+/Users/burooj/Projects/strudel/examples/
+
+highly important for it to feel native to obsidian.
 
 ## Core Features
 
