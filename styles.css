@@ -67,6 +67,34 @@
 	color: var(--text-normal);
 }
 
+/* Cursor styling for CodeMirror */
+.strudel-editor-container .cm-cursor {
+	border-color: var(--text-normal) !important;
+	border-width: 1.5px !important;
+	margin-left: 0 !important;
+}
+
+.strudel-editor-container .cm-cursor-primary {
+	border-color: var(--interactive-accent) !important;
+	border-width: 2px !important;
+}
+
+.strudel-editor-container .cm-focused .cm-cursor {
+	border-color: var(--interactive-accent) !important;
+	animation: blink 1s infinite;
+}
+
+@keyframes blink {
+	0%,
+	50% {
+		opacity: 1;
+	}
+	51%,
+	100% {
+		opacity: 0;
+	}
+}
+
 .strudel-editor-container .cm-content {
 	padding: 8px;
 	min-height: 3em;
