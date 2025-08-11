@@ -6,6 +6,8 @@
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && bun run copy",
+		"copy": "mkdir -p /Users/burooj/Obsidian/strudel-test/.obsidian/plugins/strudel-obsidian && cp main.js manifest.json styles.css /Users/burooj/Obsidian/strudel-test/.obsidian/plugins/strudel-obsidian/",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
 	"keywords": [],
