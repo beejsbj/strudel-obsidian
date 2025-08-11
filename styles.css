@@ -1,8 +1,14 @@
-/*
+/* Styles for Strudel REPL */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.strudel-playground {
+  position: relative;
+  margin-bottom: 1em;
+}
 
-If your plugin does not need CSS, delete this file.
+.strudel-editor {
+  border: 1px solid var(--background-modifier-border);
+}
 
-*/
+.strudel-toggle {
+  margin-top: 0.5em;
+}
