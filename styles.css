@@ -1,8 +1,14 @@
-/*
+/* Basic styling for Strudel REPL blocks */
+.strudel-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.strudel-editor {
+  border: 1px solid var(--background-modifier-border);
+}
 
-If your plugin does not need CSS, delete this file.
-
-*/
+.strudel-toggle {
+  align-self: flex-start;
+}

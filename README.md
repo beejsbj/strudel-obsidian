@@ -1,16 +1,8 @@
-# Obsidian Sample Plugin
+# Strudel REPL Plugin
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+This plugin renders interactive [Strudel](https://strudel.cc) code blocks inside Obsidian. Typing a markdown code block with the language `strudel` turns it into a live coding REPL with a play/stop toggle.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
-
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+Plugin settings allow you to configure editor options such as font size, theme, line wrapping, line numbers, bracket matching and autocompletion.
 
 ## First time developing plugins?
 
