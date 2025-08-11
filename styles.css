@@ -6,3 +6,57 @@ available in the app when your plugin is enabled.
 If your plugin does not need CSS, delete this file.
 
 */
+
+.strudel-editor-container {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	overflow: hidden;
+	margin-bottom: 10px;
+	min-height: 200px;
+}
+
+.strudel-controls {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 8px;
+	background: var(--background-secondary);
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.strudel-play-button {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border: none;
+	padding: 6px 12px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-weight: 500;
+}
+
+.strudel-play-button:hover {
+	background: var(--interactive-accent-hover);
+}
+
+.strudel-error {
+	color: var(--text-error);
+	padding: 10px;
+	background: var(--background-modifier-error);
+	border-radius: 4px;
+	margin: 10px 0;
+}
+
+/* Ensure Strudel editor content is properly styled */
+.strudel-editor-container .cm-editor {
+	font-family: var(--font-monospace);
+	background: var(--background-primary);
+}
+
+.strudel-editor-container .cm-focused {
+	outline: none;
+}
+
+.strudel-editor-container .cm-content {
+	padding: 12px;
+	min-height: 150px;
+}

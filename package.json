@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "strudel-obsidian",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "Strudel live coding environment for Obsidian",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
@@ -20,5 +20,14 @@
 		"obsidian": "latest",
 		"tslib": "2.4.0",
 		"typescript": "4.7.4"
+	},
+	"dependencies": {
+		"@strudel/codemirror": "^1.2.2",
+		"@strudel/core": "^1.2.2",
+		"@strudel/mini": "^1.2.2",
+		"@strudel/soundfonts": "^1.2.3",
+		"@strudel/tonal": "^1.2.2",
+		"@strudel/transpiler": "^1.2.2",
+		"@strudel/webaudio": "^1.2.3"
 	}
 }
