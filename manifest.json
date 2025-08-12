@@ -1,11 +1,10 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "strudel-obsidian",
+	"name": "Strudel",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"description": "Interactive Strudel live coding for music patterns in Obsidian",
+	"author": "beejsbj",
+	"authorUrl": "https://github.com/beejsbj",
 	"isDesktopOnly": false
 }

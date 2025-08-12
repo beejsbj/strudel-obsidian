@@ -1,11 +1,10 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "strudel-obsidian",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "Interactive Strudel live coding for music patterns in Obsidian",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
-		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && bun run copy",
 		"copy": "mkdir -p /Users/burooj/Obsidian/strudel-test/.obsidian/plugins/strudel-obsidian && cp main.js manifest.json styles.css /Users/burooj/Obsidian/strudel-test/.obsidian/plugins/strudel-obsidian/",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
@@ -22,5 +21,15 @@
 		"obsidian": "latest",
 		"tslib": "2.4.0",
 		"typescript": "4.7.4"
+	},
+	"dependencies": {
+		"@strudel/codemirror": "latest",
+		"@strudel/core": "latest",
+		"@strudel/draw": "latest",
+		"@strudel/mini": "latest",
+		"@strudel/soundfonts": "latest",
+		"@strudel/tonal": "latest",
+		"@strudel/transpiler": "latest",
+		"@strudel/webaudio": "latest"
 	}
 }

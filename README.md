@@ -1,94 +1,154 @@
-# Obsidian Sample Plugin
+# Strudel for Obsidian
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+Live-code music patterns directly in your Obsidian notes using [Strudel](https://strudel.cc/) - a web-based environment for algorithmic music.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+## Features
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+- **Live Code Blocks**: Write Strudel patterns in fenced code blocks with `strudel` language identifier
+- **Interactive Editor**: Full-featured CodeMirror editor with syntax highlighting, autocompletion, and more
+- **Real-time Playback**: Play/stop patterns with a single button
+- **Persistent Editing**: Code changes are automatically saved back to your markdown files
+- **Comprehensive Settings**: Customize editor appearance, behavior, and features
+- **Audio Engine**: Built-in Web Audio support with samples and synthesizers
 
-## First time developing plugins?
+## Usage
 
-Quick starting guide for new plugin devs:
+Create a Strudel code block in any markdown file:
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+````markdown
+```strudel
+note("c4 d4 e4 f4")
+  .s("triangle")
+  .slow(2)
+```
+````
 
-## Releasing new releases
+The code block will render as an interactive Strudel editor with a play/stop button. You can:
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+1. **Edit Code**: Click in the editor to modify the pattern
+2. **Play/Stop**: Use the button below the editor to start/stop playback
+3. **Auto-Save**: Changes are automatically saved to your markdown file
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+## Example Patterns
 
-## Adding your plugin to the community plugin list
-
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
-
-## How to use
-
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
-
-## Manually installing the plugin
-
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
-
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
-
-## Funding URL
-
-You can include funding URLs where people who use your plugin can financially support it.
-
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
+### Basic Drum Pattern
+```strudel
+stack(
+  s("bd ~ bd ~"),     // kick on 1 and 3
+  s("~ sd ~ sd"),     // snare on 2 and 4  
+  s("hh*8").gain(0.3) // constant hi-hats
+)
 ```
 
-If you have multiple URLs, you can also do:
-
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
+### Melody with Effects
+```strudel
+note("c4 eb4 f4 g4")
+  .s("sawtooth")
+  .lpf(sine.range(200, 2000).slow(4)) // moving filter
+  .delay(0.25)                        // echo
+  .gain(0.7)
 ```
 
-## API Documentation
+### Interactive Controls
+```strudel
+note("c4 d4 e4 f4")
+  .s("triangle")
+  .gain(slider(0.7, 0, 1))        // Volume slider
+  .lpf(slider(1000, 200, 2000))   // Filter slider
+  .slow(slider(2, 0.5, 4))        // Speed slider
+```
 
-See https://github.com/obsidianmd/obsidian-api
+## Settings
+
+Access plugin settings through Obsidian's Settings → Community Plugins → Strudel.
+
+### Editor Settings
+- **Font Size**: Adjust editor text size (10-24px)
+- **Font Family**: Choose from monospace fonts
+- **Theme**: Select from 30+ syntax highlighting themes
+- **Line Numbers**: Show/hide line numbers
+- **Line Wrapping**: Enable/disable line wrapping
+- **Bracket Matching**: Highlight matching brackets
+- **Auto Bracket Closing**: Automatically close brackets
+- **Autocompletion**: Enable code completion
+- **Active Line Highlighting**: Highlight current line
+
+### Strudel Features
+- **Pattern Highlighting**: Syntax highlighting for Strudel patterns
+- **Flash Effects**: Visual feedback during pattern evaluation
+- **Tooltips**: Helpful tooltips for functions and methods
+- **Tab Indentation**: Use tabs for indentation
+- **Multi-cursor**: Enable multi-cursor editing
+
+## Available Themes
+
+The plugin includes 30+ themes organized by category:
+
+- **Strudel Themes**: strudelTheme (default), algoboy, CutiePi, sonicPink
+- **Retro/Terminal**: blackscreen, bluescreen, whitescreen, teletext, greenText, redText
+- **Popular**: dracula, monokai, nord, sublime, darcula, atomone
+- **Material & Tokyo**: materialDark/Light, tokyoNight/Day/Storm
+- **GitHub & VS Code**: githubDark/Light, vscodeDark/Light
+- **Solarized & Others**: solarizedDark/Light, gruvboxDark/Light, duotoneDark, aura
+- **IDE Themes**: androidstudio, eclipse, xcodeLight, bbedit
+
+## Installation
+
+### Manual Installation
+
+1. Download the latest release
+2. Extract to `<vault>/.obsidian/plugins/strudel-obsidian/`
+3. Reload Obsidian
+4. Enable the plugin in Settings → Community Plugins
+
+### Development
+
+1. Clone this repository to `<vault>/.obsidian/plugins/strudel-obsidian/`
+2. Run `npm install` or `bun install`
+3. Run `npm run build` or `bun run build`
+4. Reload Obsidian
+
+## Audio Requirements
+
+- Modern web browser with Web Audio API support
+- User interaction required before audio playback (browser security requirement)
+- Internet connection for sample loading (cached after first load)
+
+## Strudel Documentation
+
+Learn more about Strudel patterns and functions:
+- [Strudel Website](https://strudel.cc/)
+- [Pattern Notation](https://strudel.cc/learn/patterns)
+- [Functions Reference](https://strudel.cc/learn/functions)
+- [Examples](https://strudel.cc/learn/getting-started)
+
+## Troubleshooting
+
+### Audio Not Playing
+- Ensure you've interacted with the page (click play button)
+- Check browser console for audio context errors
+- Verify internet connection for sample loading
+
+### Performance Issues
+- Disable flash effects if experiencing lag
+- Use simpler patterns for better performance
+- Close unused Strudel editors when not needed
+
+### Code Not Saving
+- Ensure the markdown file is not read-only
+- Check Obsidian file permissions
+- Try manually saving the file (Ctrl/Cmd+S)
+
+## Contributing
+
+Contributions welcome! Please read the contributing guidelines and submit pull requests.
+
+## License
+
+MIT License - see LICENSE file for details.
+
+## Credits
+
+- [Strudel](https://strudel.cc/) by Felix Roos and contributors
+- Built with [CodeMirror 6](https://codemirror.net/)
+- Audio samples from various sources
