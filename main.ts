@@ -62,7 +62,7 @@ const DEFAULT_SETTINGS: StrudelPluginSettings = {
 	isLineNumbersDisplayed: true,
 	isBracketMatchingEnabled: true,
 	isBracketClosingEnabled: true,
-	isAutoCompletionEnabled: true,
+	isAutoCompletionEnabled: false,
 	isPatternHighlightingEnabled: true,
 	isFlashEnabled: true,
 	isTooltipEnabled: true,
@@ -366,6 +366,7 @@ export default class StrudelPlugin extends Plugin {
 			initialCode: source.trim(),
 			solo: false, // Disable solo mode to allow multiple patterns simultaneously
 			onCode: (code: string) => {
+				console.log(code);
 				if (suppressInitialOnCode) {
 					suppressInitialOnCode = false;
 					return;
@@ -451,6 +452,16 @@ export default class StrudelPlugin extends Plugin {
 		// Set up debounced evaluate function
 		debouncedEvaluate = debounce(async () => {
 			if (!editor || statusIndicator.hasClass("loading")) return;
+
+			// Only auto-evaluate if the editor is currently playing
+			const currentState = this.editorStates.get(el);
+			if (!currentState || !currentState.isPlaying) {
+				console.debug(
+					"[Strudel] Skipping auto-evaluate - editor not playing"
+				);
+				return;
+			}
+
 			console.debug("[Strudel] debouncedEvaluate firing");
 			await handleEvaluate("typing");
 		}, this.settings.autoEvaluateDelay);
@@ -458,6 +469,7 @@ export default class StrudelPlugin extends Plugin {
 		// Set initial CPS
 		if (editor.repl?.setCps) {
 			editor.repl.setCps(this.settings.cps);
+
 			// editor.solo = false;
 		}
 
@@ -548,6 +560,7 @@ export default class StrudelPlugin extends Plugin {
 		const handleStop = () => {
 			try {
 				if (editor) {
+					console.log(editor);
 					editor.stop();
 				}
 				statusDot.className = "strudel-status-dot ready";
