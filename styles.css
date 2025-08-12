@@ -26,7 +26,8 @@ If your plugin does not need CSS, delete this file.
 }
 
 .strudel-play-button,
-.strudel-update-button {
+.strudel-update-button,
+.strudel-solo-button {
 	background: var(--interactive-accent);
 	color: var(--text-on-accent);
 	border: none;
@@ -46,8 +47,19 @@ If your plugin does not need CSS, delete this file.
 	color: var(--text-normal);
 }
 
+.strudel-solo-button.solo-off {
+	background: var(--interactive-normal);
+	color: var(--text-muted);
+}
+
+.strudel-solo-button.solo-on {
+	background: var(--color-orange);
+	color: var(--text-on-accent);
+}
+
 .strudel-play-button:hover,
-.strudel-update-button:hover {
+.strudel-update-button:hover,
+.strudel-solo-button:hover {
 	background: var(--interactive-accent-hover);
 }
 
@@ -56,7 +68,8 @@ If your plugin does not need CSS, delete this file.
 }
 
 .strudel-play-button:disabled,
-.strudel-update-button:disabled {
+.strudel-update-button:disabled,
+.strudel-solo-button:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
 }

@@ -70,7 +70,7 @@ const DEFAULT_SETTINGS: StrudelPluginSettings = {
 	isMultiCursorEnabled: true,
 	autoEvaluate: true,
 	autoEvaluateDelay: 500,
-	cps: 0.6,
+	cps: 0.5,
 };
 
 const AVAILABLE_THEMES = [
@@ -115,6 +115,10 @@ const FONT_FAMILIES = [
 export default class StrudelPlugin extends Plugin {
 	settings: StrudelPluginSettings;
 	private editorInstances: Map<Element, StrudelMirror> = new Map();
+	private editorStates: Map<
+		Element,
+		{ isPlaying: boolean; isSolo: boolean; editor: StrudelMirror }
+	> = new Map();
 	private isInitialized = false;
 
 	async onload() {
@@ -146,6 +150,105 @@ export default class StrudelPlugin extends Plugin {
 			}
 		});
 		this.editorInstances.clear();
+		this.editorStates.clear();
+	}
+
+	// Helper methods for solo management
+	private stopAllOtherEditors(currentElement: Element) {
+		this.editorStates.forEach((state, element) => {
+			if (element !== currentElement && state.isPlaying) {
+				try {
+					state.editor.stop();
+					state.isPlaying = false;
+
+					// Update UI for stopped editors
+					const container = element as HTMLElement;
+					const playButton = container.querySelector(
+						".strudel-play-button"
+					) as HTMLButtonElement;
+					const statusDot = container.querySelector(
+						".strudel-status-dot"
+					) as HTMLElement;
+					const statusIndicator = container.querySelector(
+						".strudel-status"
+					) as HTMLElement;
+
+					if (playButton) {
+						playButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+							<path d="M8 5v14l11-7z"/>
+						</svg>`;
+						playButton.setAttribute("aria-label", "Play");
+					}
+
+					if (statusDot) {
+						statusDot.className = "strudel-status-dot ready";
+					}
+
+					if (statusIndicator) {
+						statusIndicator.classList.remove(
+							"playing",
+							"loading",
+							"error"
+						);
+					}
+				} catch (error) {
+					console.error("Error stopping editor:", error);
+				}
+			}
+		});
+	}
+
+	private hasActiveSoloEditor(excludeElement?: Element): boolean {
+		for (const [element, state] of this.editorStates.entries()) {
+			if (element !== excludeElement && state.isSolo && state.isPlaying) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private stopAllOtherPlayingEditors(currentElement: Element) {
+		this.editorStates.forEach((state, element) => {
+			if (element !== currentElement && state.isPlaying) {
+				try {
+					state.editor.stop();
+					state.isPlaying = false;
+
+					// Update UI for stopped editors
+					const container = element as HTMLElement;
+					const playButton = container.querySelector(
+						".strudel-play-button"
+					) as HTMLButtonElement;
+					const statusDot = container.querySelector(
+						".strudel-status-dot"
+					) as HTMLElement;
+					const statusIndicator = container.querySelector(
+						".strudel-status"
+					) as HTMLElement;
+
+					if (playButton) {
+						playButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+							<path d="M8 5v14l11-7z"/>
+						</svg>`;
+						playButton.setAttribute("aria-label", "Play");
+					}
+
+					if (statusDot) {
+						statusDot.className = "strudel-status-dot ready";
+					}
+
+					if (statusIndicator) {
+						statusIndicator.classList.remove(
+							"playing",
+							"loading",
+							"error"
+						);
+					}
+				} catch (error) {
+					console.error("Error stopping editor:", error);
+				}
+			}
+		});
 	}
 
 	private async initializeStrudelModules() {
@@ -212,6 +315,16 @@ export default class StrudelPlugin extends Plugin {
 		</svg>`;
 		updateButton.setAttribute("aria-label", "Update");
 
+		// Solo toggle button
+		const soloButton = controls.createEl("button", {
+			cls: "strudel-solo-button",
+		});
+		soloButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+			<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+		</svg>`;
+		soloButton.setAttribute("aria-label", "Solo Mode: Off");
+		soloButton.classList.add("solo-off");
+
 		// Tempo controls
 		const tempoContainer = controls.createDiv({ cls: "strudel-tempo" });
 		tempoContainer.createEl("span", { text: "Tempo: " });
@@ -240,6 +353,7 @@ export default class StrudelPlugin extends Plugin {
 
 		// Track state
 		let isPlaying = false;
+		let isSolo = false;
 		let suppressInitialOnCode = true;
 		let debouncedEvaluate: any;
 
@@ -250,6 +364,7 @@ export default class StrudelPlugin extends Plugin {
 			transpiler,
 			root: editorContainer,
 			initialCode: source.trim(),
+			solo: false, // Disable solo mode to allow multiple patterns simultaneously
 			onCode: (code: string) => {
 				if (suppressInitialOnCode) {
 					suppressInitialOnCode = false;
@@ -343,6 +458,7 @@ export default class StrudelPlugin extends Plugin {
 		// Set initial CPS
 		if (editor.repl?.setCps) {
 			editor.repl.setCps(this.settings.cps);
+			// editor.solo = false;
 		}
 
 		// Add manual input event listener as fallback (like in demo.vue)
@@ -357,8 +473,11 @@ export default class StrudelPlugin extends Plugin {
 			});
 		}
 
-		// Store editor instance
+		// Store editor instance and state
 		this.editorInstances.set(el, editor);
+		this.editorStates.set(el, { isPlaying: false, isSolo: false, editor });
+
+		console.log(this.editorInstances, editor);
 
 		// Handle evaluate function
 		const handleEvaluate = async (source = "manual") => {
@@ -372,12 +491,33 @@ export default class StrudelPlugin extends Plugin {
 				statusIndicator.removeClass("error", "playing");
 				statusIndicator.addClass("loading");
 
+				const currentState = this.editorStates.get(el);
+
+				if (currentState) {
+					if (currentState.isSolo) {
+						// If this editor has solo enabled, stop all other editors
+						this.stopAllOtherPlayingEditors(el);
+					} else {
+						// If this editor doesn't have solo but there are active solo editors, stop them
+						if (this.hasActiveSoloEditor(el)) {
+							this.stopAllOtherPlayingEditors(el);
+						}
+						// If no solo editors are active, allow simultaneous playback (don't stop others)
+					}
+				}
+
 				await editor.evaluate();
 
 				statusDot.className = "strudel-status-dot playing";
 				statusIndicator.removeClass("loading");
 				statusIndicator.addClass("playing");
 				isPlaying = true;
+
+				// Update state
+				if (currentState) {
+					currentState.isPlaying = true;
+				}
+
 				// Update play button to stop icon
 				playButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
 					<rect x="6" y="6" width="12" height="12"/>
@@ -389,6 +529,13 @@ export default class StrudelPlugin extends Plugin {
 				statusIndicator.removeClass("loading", "playing");
 				statusIndicator.addClass("error");
 				isPlaying = false;
+
+				// Update state
+				const currentState = this.editorStates.get(el);
+				if (currentState) {
+					currentState.isPlaying = false;
+				}
+
 				// Reset play button to play icon
 				playButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
 					<path d="M8 5v14l11-7z"/>
@@ -406,6 +553,13 @@ export default class StrudelPlugin extends Plugin {
 				statusDot.className = "strudel-status-dot ready";
 				statusIndicator.removeClass("playing", "loading", "error");
 				isPlaying = false;
+
+				// Update state
+				const currentState = this.editorStates.get(el);
+				if (currentState) {
+					currentState.isPlaying = false;
+				}
+
 				// Reset play button to play icon
 				playButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
 					<path d="M8 5v14l11-7z"/>
@@ -419,7 +573,11 @@ export default class StrudelPlugin extends Plugin {
 		// Play/Stop button functionality
 		playButton.addEventListener("click", async () => {
 			try {
-				if (isPlaying) {
+				// Check the global state instead of local isPlaying variable
+				const currentState = this.editorStates.get(el);
+				const isCurrentlyPlaying = currentState?.isPlaying || false;
+
+				if (isCurrentlyPlaying) {
 					handleStop();
 				} else {
 					await handleEvaluate("manual");
@@ -433,6 +591,37 @@ export default class StrudelPlugin extends Plugin {
 		// Update button functionality
 		updateButton.addEventListener("click", async () => {
 			await handleEvaluate("update");
+		});
+
+		// Solo button functionality
+		soloButton.addEventListener("click", () => {
+			const currentState = this.editorStates.get(el);
+			if (!currentState) return;
+
+			// Toggle solo state
+			currentState.isSolo = !currentState.isSolo;
+			isSolo = currentState.isSolo;
+
+			if (currentState.isSolo) {
+				soloButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+				</svg>`;
+				soloButton.setAttribute("aria-label", "Solo Mode: On");
+				soloButton.classList.remove("solo-off");
+				soloButton.classList.add("solo-on");
+
+				// If this editor is playing and solo is turned on, stop all other editors
+				if (currentState.isPlaying) {
+					this.stopAllOtherEditors(el);
+				}
+			} else {
+				soloButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+				</svg>`;
+				soloButton.setAttribute("aria-label", "Solo Mode: Off");
+				soloButton.classList.remove("solo-on");
+				soloButton.classList.add("solo-off");
+			}
 		});
 
 		// Tempo slider functionality
@@ -463,6 +652,7 @@ export default class StrudelPlugin extends Plugin {
 					console.error("Error stoping editor:", error);
 				}
 				this.editorInstances.delete(el);
+				this.editorStates.delete(el);
 			}
 		};
 		ctx.addChild(child);

@@ -6,7 +6,7 @@ declare module "@strudel/codemirror" {
 		evaluate(): Promise<void>;
 		stop(): void;
 		toggle(): void;
-		destroy(): void;
+		solo?: boolean;
 		repl?: {
 			setCps(cps: number): void;
 			scheduler?: {
