@@ -6,6 +6,7 @@ import {
 	MarkdownPostProcessorContext,
 	MarkdownRenderChild,
 	TFile,
+	MarkdownView,
 } from "obsidian";
 
 import { StrudelMirror } from "@strudel/codemirror";
@@ -15,102 +16,15 @@ import {
 	getAudioContext,
 	webaudioOutput,
 	initAudioOnFirstClick,
-	registerSynthSounds,
-	samples,
 } from "@strudel/webaudio";
-import { registerSoundfonts } from "@strudel/soundfonts";
+import { registerSoundfonts } from "@strudel/soundfonts"; // (kept for backward compatibility if used elsewhere)
+import { DEFAULT_SETTINGS, StrudelPluginSettings } from "./src/types";
+import { AVAILABLE_THEMES, FONT_FAMILIES } from "./src/constants"; // re-exported lists (may still be used externally)
+import { debounce } from "./src/utils";
+import { loadStrudelModules } from "./src/strudelLoader";
+import { StrudelSettingTab } from "./src/StrudelSettingTab";
 
-/**
- * Simple trailing debounce helper for auto-evaluating after typing
- */
-function debounce(fn: Function, wait = 500) {
-	let timeout: NodeJS.Timeout;
-	const debounced = (...args: any[]) => {
-		clearTimeout(timeout);
-		timeout = setTimeout(() => fn(...args), wait);
-	};
-	debounced.cancel = () => {
-		clearTimeout(timeout);
-	};
-	return debounced;
-}
-
-interface StrudelPluginSettings {
-	fontSize: number;
-	fontFamily: string;
-	theme: string;
-	isLineWrappingEnabled: boolean;
-	isLineNumbersDisplayed: boolean;
-	isBracketMatchingEnabled: boolean;
-	isBracketClosingEnabled: boolean;
-	isAutoCompletionEnabled: boolean;
-	isPatternHighlightingEnabled: boolean;
-	isFlashEnabled: boolean;
-	isTooltipEnabled: boolean;
-	isTabIndentationEnabled: boolean;
-	isMultiCursorEnabled: boolean;
-	autoEvaluate: boolean;
-	autoEvaluateDelay: number;
-	cps: number;
-}
-
-const DEFAULT_SETTINGS: StrudelPluginSettings = {
-	fontSize: 14,
-	fontFamily: "Courier New",
-	theme: "strudelTheme",
-	isLineWrappingEnabled: true,
-	isLineNumbersDisplayed: true,
-	isBracketMatchingEnabled: true,
-	isBracketClosingEnabled: true,
-	isAutoCompletionEnabled: false,
-	isPatternHighlightingEnabled: true,
-	isFlashEnabled: true,
-	isTooltipEnabled: true,
-	isTabIndentationEnabled: true,
-	isMultiCursorEnabled: true,
-	autoEvaluate: true,
-	autoEvaluateDelay: 500,
-	cps: 0.5,
-};
-
-const AVAILABLE_THEMES = [
-	{ value: "strudelTheme", label: "Strudel (Default)" },
-	{ value: "algoboy", label: "Algoboy" },
-	{ value: "CutiePi", label: "CutiePi" },
-	{ value: "sonicPink", label: "Sonic Pink" },
-	{ value: "blackscreen", label: "Black Screen" },
-	{ value: "bluescreen", label: "Blue Screen" },
-	{ value: "whitescreen", label: "White Screen" },
-	{ value: "teletext", label: "Teletext" },
-	{ value: "greenText", label: "Green Text" },
-	{ value: "redText", label: "Red Text" },
-	{ value: "dracula", label: "Dracula" },
-	{ value: "monokai", label: "Monokai" },
-	{ value: "nord", label: "Nord" },
-	{ value: "sublime", label: "Sublime" },
-	{ value: "darcula", label: "Darcula" },
-	{ value: "atomone", label: "Atom One" },
-	{ value: "materialDark", label: "Material Dark" },
-	{ value: "materialLight", label: "Material Light" },
-	{ value: "tokyoNight", label: "Tokyo Night" },
-	{ value: "githubDark", label: "GitHub Dark" },
-	{ value: "githubLight", label: "GitHub Light" },
-	{ value: "vscodeDark", label: "VS Code Dark" },
-	{ value: "vscodeLight", label: "VS Code Light" },
-	{ value: "solarizedDark", label: "Solarized Dark" },
-	{ value: "solarizedLight", label: "Solarized Light" },
-	{ value: "gruvboxDark", label: "Gruvbox Dark" },
-	{ value: "gruvboxLight", label: "Gruvbox Light" },
-];
-
-const FONT_FAMILIES = [
-	"Courier New",
-	"Monaco",
-	"Menlo",
-	"Consolas",
-	"SF Mono",
-	"monospace",
-];
+// (lists, defaults, utils, and loader extracted to src/* to slim this file)
 
 export default class StrudelPlugin extends Plugin {
 	settings: StrudelPluginSettings;
@@ -146,56 +60,81 @@ export default class StrudelPlugin extends Plugin {
 			try {
 				editor.stop();
 			} catch (error) {
-				console.error("Error stoping Strudel editor:", error);
+				console.error("Error stopping Strudel editor:", error);
 			}
 		});
 		this.editorInstances.clear();
 		this.editorStates.clear();
 	}
 
-	// Helper methods for solo management
-	private stopAllOtherEditors(currentElement: Element) {
+	// --- Helper methods for solo & playback management ---
+	private updateEditorUIState(
+		container: Element,
+		state: "ready" | "playing" | "loading" | "error"
+	) {
+		const root = container as HTMLElement;
+		const playButton = root.querySelector(
+			".strudel-play-button"
+		) as HTMLButtonElement | null;
+		const statusDot = root.querySelector(
+			".strudel-status-dot"
+		) as HTMLElement | null;
+		const statusIndicator = root.querySelector(
+			".strudel-status"
+		) as HTMLElement | null;
+
+		if (playButton && state !== "playing") {
+			playButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
+			playButton.setAttribute("aria-label", "Play");
+		}
+		if (playButton && state === "playing") {
+			playButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12"/></svg>`;
+			playButton.setAttribute("aria-label", "Stop");
+		}
+
+		if (statusDot) {
+			statusDot.className = `strudel-status-dot ${state}`;
+		}
+		if (statusIndicator) {
+			statusIndicator.classList.remove("playing", "loading", "error");
+			if (
+				state === "playing" ||
+				state === "loading" ||
+				state === "error"
+			) {
+				statusIndicator.classList.add(state);
+			}
+		}
+	}
+
+	private stopEditors(
+		predicate: (
+			element: Element,
+			state: {
+				isPlaying: boolean;
+				isSolo: boolean;
+				editor: StrudelMirror;
+			}
+		) => boolean,
+		currentElement?: Element
+	) {
 		this.editorStates.forEach((state, element) => {
-			if (element !== currentElement && state.isPlaying) {
+			if (predicate(element, state)) {
 				try {
 					state.editor.stop();
 					state.isPlaying = false;
-
-					// Update UI for stopped editors
-					const container = element as HTMLElement;
-					const playButton = container.querySelector(
-						".strudel-play-button"
-					) as HTMLButtonElement;
-					const statusDot = container.querySelector(
-						".strudel-status-dot"
-					) as HTMLElement;
-					const statusIndicator = container.querySelector(
-						".strudel-status"
-					) as HTMLElement;
-
-					if (playButton) {
-						playButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-							<path d="M8 5v14l11-7z"/>
-						</svg>`;
-						playButton.setAttribute("aria-label", "Play");
-					}
-
-					if (statusDot) {
-						statusDot.className = "strudel-status-dot ready";
-					}
-
-					if (statusIndicator) {
-						statusIndicator.classList.remove(
-							"playing",
-							"loading",
-							"error"
-						);
-					}
+					this.updateEditorUIState(element, "ready");
 				} catch (error) {
 					console.error("Error stopping editor:", error);
 				}
 			}
 		});
+	}
+
+	private stopAllOtherEditors(currentElement: Element) {
+		this.stopEditors(
+			(element, state) => element !== currentElement && state.isPlaying
+		);
 	}
 
 	private hasActiveSoloEditor(excludeElement?: Element): boolean {
@@ -208,75 +147,16 @@ export default class StrudelPlugin extends Plugin {
 	}
 
 	private stopAllOtherPlayingEditors(currentElement: Element) {
-		this.editorStates.forEach((state, element) => {
-			if (element !== currentElement && state.isPlaying) {
-				try {
-					state.editor.stop();
-					state.isPlaying = false;
-
-					// Update UI for stopped editors
-					const container = element as HTMLElement;
-					const playButton = container.querySelector(
-						".strudel-play-button"
-					) as HTMLButtonElement;
-					const statusDot = container.querySelector(
-						".strudel-status-dot"
-					) as HTMLElement;
-					const statusIndicator = container.querySelector(
-						".strudel-status"
-					) as HTMLElement;
-
-					if (playButton) {
-						playButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-							<path d="M8 5v14l11-7z"/>
-						</svg>`;
-						playButton.setAttribute("aria-label", "Play");
-					}
-
-					if (statusDot) {
-						statusDot.className = "strudel-status-dot ready";
-					}
-
-					if (statusIndicator) {
-						statusIndicator.classList.remove(
-							"playing",
-							"loading",
-							"error"
-						);
-					}
-				} catch (error) {
-					console.error("Error stopping editor:", error);
-				}
-			}
-		});
+		this.stopEditors(
+			(element, state) => element !== currentElement && state.isPlaying
+		);
 	}
 
 	private async initializeStrudelModules() {
 		if (this.isInitialized) return;
 
 		try {
-			const loadModules = evalScope(
-				import("@strudel/core"),
-				import("@strudel/mini"),
-				import("@strudel/tonal"),
-				import("@strudel/webaudio")
-			);
-
-			const ds =
-				"https://raw.githubusercontent.com/felixroos/dough-samples/main/";
-
-			await Promise.all([
-				loadModules,
-				samples(`${ds}/tidal-drum-machines.json`),
-				samples(`${ds}/piano.json`),
-				samples(`${ds}/Dirt-Samples.json`),
-				samples(`${ds}/EmuSP12.json`),
-				samples(`${ds}/vcsl.json`),
-				samples(`${ds}/mridangam.json`),
-				registerSynthSounds(),
-				registerSoundfonts(),
-			]);
-
+			await loadStrudelModules();
 			this.isInitialized = true;
 		} catch (error) {
 			console.error("Failed to initialize Strudel modules:", error);
@@ -288,7 +168,6 @@ export default class StrudelPlugin extends Plugin {
 		el: HTMLElement,
 		ctx: MarkdownPostProcessorContext
 	) {
-		// console.log("blockprocer", el, ctx);
 		// Wait for Strudel to be initialized
 		await this.initializeStrudelModules();
 
@@ -356,6 +235,38 @@ export default class StrudelPlugin extends Plugin {
 		let isSolo = false;
 		let suppressInitialOnCode = true;
 		let debouncedEvaluate: any;
+		let lastSavedCode = source.trim(); // Track the last saved code to avoid unnecessary updates
+		let isTyping = false; // Track if user is actively typing
+		let typingTimeout: NodeJS.Timeout | null = null;
+
+		// Function to update the code block (without debouncing when typing check fails)
+		const updateCodeBlockIfSafe = (code: string) => {
+			// Don't update if user is actively typing or editor has focus
+			if (
+				isTyping ||
+				document.activeElement?.closest(".strudel-editor")
+			) {
+				return false; // Indicate update was skipped
+			}
+
+			// Don't update if editor is currently playing (to avoid interrupting playback)
+			const currentState = this.editorStates.get(el);
+			if (currentState && currentState.isPlaying) {
+				return false; // Indicate update was skipped
+			}
+
+			if (code !== lastSavedCode) {
+				this.updateCodeBlock(ctx, code, el);
+				lastSavedCode = code;
+				return true; // Indicate update was successful
+			}
+			return true; // No update needed, but safe to proceed
+		};
+
+		// Debounced function to update the code block
+		const debouncedUpdateCodeBlock = debounce((code: string) => {
+			updateCodeBlockIfSafe(code);
+		}, 200);
 
 		// Initialize StrudelMirror with enhanced configuration
 		const editor = new StrudelMirror({
@@ -366,66 +277,36 @@ export default class StrudelPlugin extends Plugin {
 			initialCode: source.trim(),
 			solo: false, // Disable solo mode to allow multiple patterns simultaneously
 			onCode: (code: string) => {
-				console.log(code);
 				if (suppressInitialOnCode) {
 					suppressInitialOnCode = false;
 					return;
 				}
 
-				// Update the source in the markdown
-				this.updateCodeBlock(ctx, code);
+				// Update the source in the markdown (debounced to avoid too frequent updates)
+				debouncedUpdateCodeBlock(code);
 
 				// Auto-evaluate if enabled
 				if (this.settings.autoEvaluate && debouncedEvaluate) {
-					console.debug(
-						"[Strudel] onCode change, scheduling evaluate"
-					);
 					debouncedEvaluate();
 				}
 			},
 			onError: (error: any) => {
 				console.error("Strudel error:", error);
-				statusDot.className = "strudel-status-dot error";
-				statusIndicator.removeClass("playing", "loading");
-				statusIndicator.addClass("error");
+				this.updateEditorUIState(el, "error");
 			},
 			prebake: async () => {
 				try {
-					statusDot.className = "strudel-status-dot loading";
-					statusIndicator.addClass("loading");
+					this.updateEditorUIState(el, "loading");
 
-					const loadModules = evalScope(
-						import("@strudel/core"),
-						import("@strudel/mini"),
-						import("@strudel/tonal"),
-						import("@strudel/webaudio")
-					);
+					await loadStrudelModules();
 
-					const ds =
-						"https://raw.githubusercontent.com/felixroos/dough-samples/main/";
-
-					await Promise.all([
-						loadModules,
-						samples(`${ds}/tidal-drum-machines.json`),
-						samples(`${ds}/piano.json`),
-						samples(`${ds}/Dirt-Samples.json`),
-						samples(`${ds}/EmuSP12.json`),
-						samples(`${ds}/vcsl.json`),
-						samples(`${ds}/mridangam.json`),
-						registerSynthSounds(),
-						registerSoundfonts(),
-					]);
-
-					statusDot.className = "strudel-status-dot ready";
-					statusIndicator.removeClass("loading");
+					this.updateEditorUIState(el, "ready");
 				} catch (error: any) {
 					console.error(
 						"Failed to initialize Strudel modules:",
 						error
 					);
-					statusDot.className = "strudel-status-dot error";
-					statusIndicator.removeClass("loading");
-					statusIndicator.addClass("error");
+					this.updateEditorUIState(el, "error");
 					throw error;
 				}
 			},
@@ -456,52 +337,107 @@ export default class StrudelPlugin extends Plugin {
 			// Only auto-evaluate if the editor is currently playing
 			const currentState = this.editorStates.get(el);
 			if (!currentState || !currentState.isPlaying) {
-				console.debug(
-					"[Strudel] Skipping auto-evaluate - editor not playing"
-				);
 				return;
 			}
 
-			console.debug("[Strudel] debouncedEvaluate firing");
 			await handleEvaluate("typing");
 		}, this.settings.autoEvaluateDelay);
 
 		// Set initial CPS
 		if (editor.repl?.setCps) {
 			editor.repl.setCps(this.settings.cps);
-
-			// editor.solo = false;
 		}
 
-		// Add manual input event listener as fallback (like in demo.vue)
+		// Add manual input event listener as fallback (and for typing detection)
 		if (editorContainer && this.settings.autoEvaluate) {
-			editorContainer.addEventListener("input", () => {
+			// Add event listeners to track typing activity
+			const handleTypingStart = () => {
+				isTyping = true;
+				if (typingTimeout) {
+					clearTimeout(typingTimeout);
+				}
+			};
+
+			const handleTypingEnd = () => {
+				if (typingTimeout) {
+					clearTimeout(typingTimeout);
+				}
+				typingTimeout = setTimeout(() => {
+					isTyping = false;
+					// Check if there are pending updates and try to update safely
+					const currentCode = getEditorContent(editor);
+					if (currentCode !== lastSavedCode) {
+						updateCodeBlockIfSafe(currentCode);
+					}
+				}, 1500); // Wait 1.5 seconds after last keystroke
+			};
+
+			// Listen for input events (character insertions, deletions)
+			editorContainer.addEventListener("input", (event) => {
+				handleTypingStart();
 				if (debouncedEvaluate) {
-					console.debug(
-						"[Strudel] Manual input event, scheduling evaluate"
-					);
 					debouncedEvaluate();
 				}
+				// Delay code block update while typing
+				handleTypingEnd();
 			});
+
+			// Listen for keyup events (more reliable for text changes)
+			editorContainer.addEventListener("keyup", (event) => {
+				handleTypingStart();
+				// Delay code block update while typing
+				handleTypingEnd();
+			});
+
+			// Listen for keydown to immediately detect typing start
+			editorContainer.addEventListener("keydown", (event) => {
+				handleTypingStart();
+			});
+
+			// Listen for paste events
+			editorContainer.addEventListener("paste", (event) => {
+				handleTypingStart();
+				setTimeout(() => {
+					handleTypingEnd();
+				}, 50); // Small delay to let paste complete
+			});
+
+			// When editor loses focus, stop typing immediately and save
+			editorContainer.addEventListener("blur", () => {
+				isTyping = false;
+				if (typingTimeout) {
+					clearTimeout(typingTimeout);
+					typingTimeout = null;
+				}
+				// Save any pending changes immediately when focus is lost
+				const currentCode = getEditorContent(editor);
+				if (currentCode !== lastSavedCode) {
+					this.updateCodeBlock(ctx, currentCode, el);
+					lastSavedCode = currentCode;
+				}
+			});
+		}
+
+		// Helper function to get current editor content
+		function getEditorContent(editor: StrudelMirror): string {
+			try {
+				// Use the editor.code property directly
+				return editor.code || "";
+			} catch (error) {
+				return "";
+			}
 		}
 
 		// Store editor instance and state
 		this.editorInstances.set(el, editor);
 		this.editorStates.set(el, { isPlaying: false, isSolo: false, editor });
 
-		console.log(this.editorInstances, editor);
-
 		// Handle evaluate function
 		const handleEvaluate = async (source = "manual") => {
 			if (!editor) return;
 
 			try {
-				console.debug(
-					`[Strudel] handleEvaluate() start (source=${source})`
-				);
-				statusDot.className = "strudel-status-dot loading";
-				statusIndicator.removeClass("error", "playing");
-				statusIndicator.addClass("loading");
+				this.updateEditorUIState(el, "loading");
 
 				const currentState = this.editorStates.get(el);
 
@@ -520,9 +456,7 @@ export default class StrudelPlugin extends Plugin {
 
 				await editor.evaluate();
 
-				statusDot.className = "strudel-status-dot playing";
-				statusIndicator.removeClass("loading");
-				statusIndicator.addClass("playing");
+				this.updateEditorUIState(el, "playing");
 				isPlaying = true;
 
 				// Update state
@@ -537,9 +471,7 @@ export default class StrudelPlugin extends Plugin {
 				playButton.setAttribute("aria-label", "Stop");
 			} catch (error: any) {
 				console.error("Error during evaluation:", error);
-				statusDot.className = "strudel-status-dot error";
-				statusIndicator.removeClass("loading", "playing");
-				statusIndicator.addClass("error");
+				this.updateEditorUIState(el, "error");
 				isPlaying = false;
 
 				// Update state
@@ -560,11 +492,9 @@ export default class StrudelPlugin extends Plugin {
 		const handleStop = () => {
 			try {
 				if (editor) {
-					console.log(editor);
 					editor.stop();
 				}
-				statusDot.className = "strudel-status-dot ready";
-				statusIndicator.removeClass("playing", "loading", "error");
+				this.updateEditorUIState(el, "ready");
 				isPlaying = false;
 
 				// Update state
@@ -578,6 +508,15 @@ export default class StrudelPlugin extends Plugin {
 					<path d="M8 5v14l11-7z"/>
 				</svg>`;
 				playButton.setAttribute("aria-label", "Play");
+
+				// After stopping, check if there are pending code changes to save
+				const currentCode = getEditorContent(editor);
+				if (currentCode !== lastSavedCode) {
+					setTimeout(() => {
+						// Small delay to ensure stop is fully processed
+						updateCodeBlockIfSafe(currentCode);
+					}, 100);
+				}
 			} catch (error: any) {
 				console.error("Error stopping playback:", error);
 			}
@@ -653,8 +592,29 @@ export default class StrudelPlugin extends Plugin {
 		// Clean up when element is removed
 		const child = new MarkdownRenderChild(container);
 		child.onunload = () => {
+			// Save any pending changes before cleanup
+			try {
+				const currentCode = getEditorContent(editor);
+				if (currentCode !== lastSavedCode) {
+					// Force save without safety checks since we're cleaning up
+					this.updateCodeBlock(ctx, currentCode, el);
+				}
+			} catch (error) {
+				// Ignore errors during cleanup
+			}
+
 			if (debouncedEvaluate?.cancel) {
 				debouncedEvaluate.cancel();
+			}
+
+			if (debouncedUpdateCodeBlock?.cancel) {
+				debouncedUpdateCodeBlock.cancel();
+			}
+
+			// Clear any pending typing timeout
+			if (typingTimeout) {
+				clearTimeout(typingTimeout);
+				typingTimeout = null;
 			}
 
 			if (this.editorInstances.has(el)) {
@@ -662,7 +622,7 @@ export default class StrudelPlugin extends Plugin {
 				try {
 					editorInstance?.stop();
 				} catch (error) {
-					console.error("Error stoping editor:", error);
+					console.error("Error stopping editor:", error);
 				}
 				this.editorInstances.delete(el);
 				this.editorStates.delete(el);
@@ -673,32 +633,56 @@ export default class StrudelPlugin extends Plugin {
 
 	private async updateCodeBlock(
 		ctx: MarkdownPostProcessorContext,
-		newCode: string
+		newCode: string,
+		el: HTMLElement
 	) {
-		// Get the file
-		const file = this.app.vault.getAbstractFileByPath(ctx.sourcePath);
-		if (!file || !(file instanceof TFile) || file.extension !== "md") {
-			return;
-		}
-
 		try {
-			// Read the current file content
-			const content = await this.app.vault.read(file);
-
-			// Simple approach: find and replace the first strudel code block
-			// This could be improved to handle multiple blocks more precisely
-			const strudelBlockRegex = /```strudel\n([\s\S]*?)\n```/;
-			const match = content.match(strudelBlockRegex);
-
-			if (match) {
-				const newContent = content.replace(
-					strudelBlockRegex,
-					`\`\`\`strudel\n${newCode}\n\`\`\``
-				);
-				await this.app.vault.modify(file, newContent);
+			// Get the active markdown view
+			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+			if (!view || !view.editor) {
+				return;
 			}
+
+			// Get section information for this code block
+			const sectionInfo = ctx.getSectionInfo(el);
+			if (!sectionInfo) {
+				return;
+			}
+
+			const { lineStart, lineEnd } = sectionInfo;
+
+			// Validate that we have a proper code block structure
+			if (lineStart >= lineEnd - 1) {
+				return;
+			}
+
+			// Get the current content to check if we need to update
+			const codeStartLine = lineStart + 1;
+			const codeEndLine = lineEnd - 1;
+
+			// Get the current code content
+			let currentCode = "";
+			for (let i = codeStartLine; i <= codeEndLine; i++) {
+				if (i > codeStartLine) currentCode += "\n";
+				currentCode += view.editor.getLine(i);
+			}
+
+			// Only update if the code has actually changed
+			if (currentCode === newCode) {
+				return;
+			}
+
+			// Replace the content between the code block markers
+			view.editor.replaceRange(
+				newCode,
+				{ line: codeStartLine, ch: 0 },
+				{
+					line: codeEndLine,
+					ch: view.editor.getLine(codeEndLine).length,
+				}
+			);
 		} catch (error) {
-			console.error("Failed to update code block:", error);
+			console.error("[Strudel] Failed to update code block:", error);
 		}
 	}
 
@@ -751,233 +735,4 @@ export default class StrudelPlugin extends Plugin {
 	}
 }
 
-class StrudelSettingTab extends PluginSettingTab {
-	plugin: StrudelPlugin;
-
-	constructor(app: App, plugin: StrudelPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		const { containerEl } = this;
-		containerEl.empty();
-
-		containerEl.createEl("h2", { text: "Strudel Plugin Settings" });
-
-		// Font Size
-		new Setting(containerEl)
-			.setName("Font Size")
-			.setDesc("Font size for the code editor")
-			.addSlider((slider) =>
-				slider
-					.setLimits(10, 24, 1)
-					.setValue(this.plugin.settings.fontSize)
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						this.plugin.settings.fontSize = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		// Font Family
-		new Setting(containerEl)
-			.setName("Font Family")
-			.setDesc("Font family for the code editor")
-			.addDropdown((dropdown) => {
-				FONT_FAMILIES.forEach((font) => {
-					dropdown.addOption(font, font);
-				});
-				dropdown
-					.setValue(this.plugin.settings.fontFamily)
-					.onChange(async (value) => {
-						this.plugin.settings.fontFamily = value;
-						await this.plugin.saveSettings();
-					});
-			});
-
-		// Theme
-		new Setting(containerEl)
-			.setName("Editor Theme")
-			.setDesc("Color theme for the code editor")
-			.addDropdown((dropdown) => {
-				AVAILABLE_THEMES.forEach((theme) => {
-					dropdown.addOption(theme.value, theme.label);
-				});
-				dropdown
-					.setValue(this.plugin.settings.theme)
-					.onChange(async (value) => {
-						this.plugin.settings.theme = value;
-						await this.plugin.saveSettings();
-					});
-			});
-
-		// Default Tempo
-		new Setting(containerEl)
-			.setName("Default Tempo (CPS)")
-			.setDesc("Default cycles per second for new editors")
-			.addSlider((slider) =>
-				slider
-					.setLimits(0.1, 4.0, 0.1)
-					.setValue(this.plugin.settings.cps)
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						this.plugin.settings.cps = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		// Editor Features
-		containerEl.createEl("h3", { text: "Editor Features" });
-
-		new Setting(containerEl)
-			.setName("Line Wrapping")
-			.setDesc("Enable line wrapping in the editor")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.isLineWrappingEnabled)
-					.onChange(async (value) => {
-						this.plugin.settings.isLineWrappingEnabled = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Line Numbers")
-			.setDesc("Show line numbers in the editor")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.isLineNumbersDisplayed)
-					.onChange(async (value) => {
-						this.plugin.settings.isLineNumbersDisplayed = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Bracket Matching")
-			.setDesc("Highlight matching brackets")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.isBracketMatchingEnabled)
-					.onChange(async (value) => {
-						this.plugin.settings.isBracketMatchingEnabled = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Auto Bracket Closing")
-			.setDesc("Automatically close brackets")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.isBracketClosingEnabled)
-					.onChange(async (value) => {
-						this.plugin.settings.isBracketClosingEnabled = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Autocompletion")
-			.setDesc("Enable code autocompletion")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.isAutoCompletionEnabled)
-					.onChange(async (value) => {
-						this.plugin.settings.isAutoCompletionEnabled = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Pattern Highlighting")
-			.setDesc("Enable pattern syntax highlighting")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.isPatternHighlightingEnabled)
-					.onChange(async (value) => {
-						this.plugin.settings.isPatternHighlightingEnabled =
-							value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Flash Effects")
-			.setDesc("Enable visual flash effects during evaluation")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.isFlashEnabled)
-					.onChange(async (value) => {
-						this.plugin.settings.isFlashEnabled = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Tooltips")
-			.setDesc("Show helpful tooltips in the editor")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.isTooltipEnabled)
-					.onChange(async (value) => {
-						this.plugin.settings.isTooltipEnabled = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Tab Indentation")
-			.setDesc("Use tab for indentation instead of spaces")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.isTabIndentationEnabled)
-					.onChange(async (value) => {
-						this.plugin.settings.isTabIndentationEnabled = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Multi-Cursor")
-			.setDesc("Enable multi-cursor editing")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.isMultiCursorEnabled)
-					.onChange(async (value) => {
-						this.plugin.settings.isMultiCursorEnabled = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		// Auto-evaluation settings
-		containerEl.createEl("h3", { text: "Auto-Evaluation" });
-
-		new Setting(containerEl)
-			.setName("Auto-Evaluate")
-			.setDesc("Automatically evaluate code when typing stops")
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.autoEvaluate)
-					.onChange(async (value) => {
-						this.plugin.settings.autoEvaluate = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Auto-Evaluate Delay")
-			.setDesc("Delay in milliseconds before auto-evaluation")
-			.addSlider((slider) =>
-				slider
-					.setLimits(100, 2000, 100)
-					.setValue(this.plugin.settings.autoEvaluateDelay)
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						this.plugin.settings.autoEvaluateDelay = value;
-						await this.plugin.saveSettings();
-					})
-			);
-	}
-}
+// Settings tab class extracted to src/StrudelSettingTab.ts

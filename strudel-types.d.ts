@@ -6,6 +6,7 @@ declare module "@strudel/codemirror" {
 		evaluate(): Promise<void>;
 		stop(): void;
 		toggle(): void;
+		code: string; // Current editor content
 		solo?: boolean;
 		repl?: {
 			setCps(cps: number): void;
